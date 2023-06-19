@@ -112,7 +112,7 @@ def remove_emojis(text):
 # Apply emoji removal to the 'content' column
 new_df.loc[:, 'content'] = new_df['content'].apply(remove_emojis)
 
-# Remove stopwords from the 'content' column
+# Tokenize contents and Remove stopwords from the 'content' column
 stop_words = set(stopwords.words('english'))
 new_df.loc[:, 'content'] = new_df['content'].apply(
     lambda x: ' '.join([word for word in word_tokenize(x) if word.lower() not in stop_words]))
@@ -121,7 +121,7 @@ new_df.loc[:, 'content'] = new_df['content'].apply(
 new_df['content'] = new_df['content'].apply(lambda x: re.sub(r'\b(chatgpt|chat gpt|gpt|amp)\b', '', x))
 
 
-# Tokenize contents
+# Lemmatization
 def lemmatizer(text, nlp):
     sent = []
     doc = nlp(text)
@@ -145,7 +145,7 @@ topic_model = BERTopic(language="english", calculate_probabilities=True, verbose
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Create the BERTopics
-# Add the logging statements to your code
+# Add the logging statements to the code
 logging.info('Starting BERTopic fitting and transformation...')
 topic_model.fit(texts)
 logging.info('Starting BERTopic fitting and transformation...1')
@@ -174,25 +174,29 @@ fig.write_html("/Users/busracaliskan/IdeaProjects/Thesis_BERTopic/visualization.
 # Visualize topic hierarchy to make informed decisions about topic reduction and the number of topics to retain
 # based on the structure and relationships observed in the dendrogram.
 fig = topic_model.visualize_hierarchy(top_n_topics=50)
-
 # Save the figure as an HTML file
 fig.write_html("/Users/busracaliskan/IdeaProjects/Thesis_BERTopic/topic_hierarchy.html")
 
 # Perform hierarchical topic reduction
+# reduced_topics = topic_model.reduce_topics(texts, nr_topics="auto")
+
 reduced_topics = topic_model.reduce_topics(texts, nr_topics=50)
+
+print(reduced_topics.get_topic_info())
 
 # Get the topic information
 topic_info = reduced_topics.get_topic_info()
 
 # Sort topics by their probabilities
-sorted_topics = topic_info.sort_values(by='Count', ascending=False)
+# sorted_topics = topic_info.sort_values(by='Count', ascending=False)
 
-# Print top 10 topics with keywords and probabilities
-top_10_topics = sorted_topics.head(10)
+# Setting display to see all  columns
+# pd.options.display.max_columns = None
+pd.set_option('display.max_columns', None)
+pd.set_option('display.max_colwidth', 100)  # Adjust the width as needed
 
-# Set the display option to show all columns
-pd.options.display.max_columns = None
+# Print top 10 topics with keywords and probabilities (we'll print head 11 since -1 shows outliers)
+top_10_topics = topic_info.head(11)
 
 # Print top 10 topics with all columns
-top_10_topics = sorted_topics.head(10)
 print(top_10_topics)
