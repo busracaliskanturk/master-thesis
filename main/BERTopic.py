@@ -1,9 +1,8 @@
-# Loading required packages & libraries
-
 import logging
 import re
 import os
 import warnings
+import time
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -25,15 +24,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Load the English language model
 nlp = spacy.load('en_core_web_sm')
 
-# loading the data file: it is also available via below link:
-# 'https://www.kaggle.com/datasets/khalidryder777/500k-chatgpt-tweets-jan-mar-2023'
+# loading the data file
 df = pd.read_csv('/Users/busracaliskan/Desktop/Thesis Data/Twitter Jan Mar.csv')
 
-# check
-df.head()
-print(df.head())
-
-# copy dataset just in case
+# Copy dataset just in case
 df_bert = df.copy()
 
 # PREPARING DATA SET
@@ -42,7 +36,7 @@ df_bert = df.copy()
 df_dropped = df_bert.dropna()
 df_dropped.shape
 
-# To check if there is duplicate values in the "content" column
+# To check if there are duplicate values in the "content" column
 duplicates = df_dropped.duplicated(subset='content')
 
 # Remove the duplicate rows
@@ -57,48 +51,34 @@ sorted_df = df_unique.sort_values(by='retweet_count', ascending=False)
 # Reset the index from the beginning
 sorted_df.reset_index(drop=True, inplace=True)
 
-# i decided to analyse top 30000 retweeted tweets since its a huge dataset so hard to analyse and #its more valuable
-# to work with most influential tweets.
-
-# creating a dataset with first 30000 tweeets
+# Select the first 30000 tweets for analysis
 new_df = sorted_df.head(30000)
 print('new_df shape:', new_df.shape)
 
-# to lowercase all the content
+# Convert the content to lowercase
 new_df.loc[:, 'content'] = new_df['content'].str.lower()
 
-# removing hashtags
+# Remove hashtags
 new_df.loc[:, 'content'] = new_df['content'].apply(lambda x: re.sub(r'#\w+', '', x))
 
-# removing mentions
+# Remove mentions
 new_df.loc[:, 'content'] = new_df['content'].apply(lambda x: re.sub(r"@\w+", "", x))
 
-# removing URLs and HTTPs
-
-# Define the URL pattern using regular expressions
+# Remove URLs and HTTPs
 url_pattern = r"http[s]?:\/\/\S+"
-
-# Apply the regex pattern to the 'content' column and replace URLs with an empty string
 new_df.loc[:, 'content'] = new_df['content'].str.replace(url_pattern, "", regex=True)
 
-
 # Remove punctuation from the 'content' column
-
-# Define a function to remove punctuation
 def remove_punctuation(text):
     cleaned_text = re.sub(r'[^\w\s]', '', text)
     return cleaned_text
 
-
-# Apply the function to the 'content' column
 new_df.loc[:, 'content'] = new_df['content'].apply(remove_punctuation)
 
-# removing numbers from the content
+# Remove numbers from the 'content' column
 new_df.loc[:, 'content'] = new_df['content'].str.replace('\d+', '', regex=True)
 
-
 # Remove emojis from text
-
 def remove_emojis(text):
     emoji_pattern = re.compile("["
                                u"\U0001F600-\U0001F64F"  # Emojis
@@ -108,30 +88,27 @@ def remove_emojis(text):
                                "]+", flags=re.UNICODE)
     return emoji_pattern.sub(r'', text)
 
-
-# Apply emoji removal to the 'content' column
 new_df.loc[:, 'content'] = new_df['content'].apply(remove_emojis)
 
-# Tokenize contents and Remove stopwords from the 'content' column
+# Tokenize contents and remove stopwords from the 'content' column
 stop_words = set(stopwords.words('english'))
 new_df.loc[:, 'content'] = new_df['content'].apply(
     lambda x: ' '.join([word for word in word_tokenize(x) if word.lower() not in stop_words]))
 
-# extra words to remove
+# Extra words to remove
 new_df['content'] = new_df['content'].apply(lambda x: re.sub(r'\b(chatgpt|chat gpt|gpt|amp)\b', '', x))
 
-
 # Lemmatization
-def lemmatizer(text, nlp):
+def lemmatizer(text, nlp, length_list):
     sent = []
     doc = nlp(text)
     for word in doc:
         sent.append(word.lemma_)
+    length_list.append(len(sent))
     return " ".join(sent)
 
-
-# Apply lemmatizer to the 'content' column
-new_df.loc[:, "lemmatized"] = new_df["content"].apply(lambda x: lemmatizer(x, nlp))
+length_list = []  # List to store the length of each lemmatized text
+new_df.loc[:, "lemmatized"] = new_df["content"].apply(lambda x: lemmatizer(x, nlp, length_list))
 
 texts = new_df["lemmatized"]
 
@@ -200,3 +177,5 @@ top_10_topics = topic_info.head(11)
 
 # Print top 10 topics with all columns
 print(top_10_topics)
+
+
